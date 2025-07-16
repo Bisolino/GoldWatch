@@ -1,3 +1,6 @@
++ [![Downloads](https://cf.way2muchnoise.eu/full_goldwatch-gw_downloads.svg)](https://www.curseforge.com/wow/addons/goldwatch-gw)
+
+
 # GoldWatch - Gold Tracker for WoW
 
 **GoldWatch** is a World of Warcraft addon that tracks your gold earnings in real-time during farming sessions. It calculates your gold per hour (GPH) and provides accurate projections, featuring an intelligent "hyperspawn" detection system.

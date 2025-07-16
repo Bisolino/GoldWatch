@@ -1,3 +1,6 @@
++ [![Downloads](https://cf.way2muchnoise.eu/full_goldwatch-gw_downloads.svg)](https://www.curseforge.com/wow/addons/goldwatch-gw)
+
+
 # GoldWatch - Rastreador de Ouro para WoW
 
 **GoldWatch** é um addon para World of Warcraft que rastreia em tempo real o ouro que você ganha durante suas sessões de farm. Ele calcula seu ganho por hora (GPH) e fornece projeções precisas, além de incluir um sistema inteligente para detectar situações de "hyperspawn" (respawn anormalmente rápido de monstros).

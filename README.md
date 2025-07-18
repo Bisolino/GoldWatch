@@ -2,6 +2,8 @@
 + [![Version](https://img.shields.io/badge/Version-1.1.0-blue)](https://www.curseforge.com/wow/addons/goldwatch-gw)
 + [![Stability](https://img.shields.io/badge/Stability-98%25-success)](https://github.com/Bisolino/GoldWatch)
 
+# GoldWatch - Advanced Gold Tracker for WoW
+
 **GoldWatch v1.1.0** is the ultimate gold tracker for World of Warcraft, featuring modular architecture, intelligent hyperspawn detection, and full visual history. Fully optimized with multi-language support!
 
 ## 🚀 What's New in v1.1.0

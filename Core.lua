@@ -2,6 +2,7 @@ local addonName, GW = ...
 GW.addonName = addonName
 _G[addonName] = GW
 
+-- Módulos
 GW.Events = {}
 GW.Data = {}
 GW.UI = {}
@@ -10,7 +11,18 @@ GW.Export = {}
 GW.L = {}
 GW.Animations = {}
 GW.History = {}
+GW.State = {} -- Novo módulo de estado
 
+-- API de estado simplificada
+function GW.IsTracking()
+    return GW.DB and GW.DB.isTracking
+end
+
+function GW.IsTrackingActive()
+    return GW.IsTracking() and not GW.DB.isPaused
+end
+
+-- Função de segurança
 function GW.SafeCall(func, ...)
     local success, err = pcall(func, ...)
     if not success then
@@ -20,7 +32,7 @@ function GW.SafeCall(func, ...)
     return true
 end
 
--- Registrar comandos slash
+-- Comandos slash
 SLASH_GOLDWATCH1 = "/GW"
 SLASH_GOLDWATCH2 = "/goldwatch"
 SlashCmdList["GOLDWATCH"] = function(msg)
@@ -36,7 +48,12 @@ SlashCmdList["GOLDWATCH"] = function(msg)
             ["reset all"] = function() 
                 StaticPopup_Show("GOLDWATCH_CONFIRM_NUCLEAR_RESET") 
             end,
-            ["history"] = GW.History.ShowHistoryWindow
+            ["history"] = GW.History.ShowHistoryWindow,
+            ["state"] = function()
+                print("Tracking:", GW.IsTracking() and "ON" or "OFF")
+                print("Paused:", GW.DB.isPaused and "YES" or "NO")
+                print("Update Interval:", format("%d seconds", GW.Settings.updateInterval))
+            end
         }
         
         if validCommands[command] then
@@ -54,8 +71,7 @@ SlashCmdList["GOLDWATCH"] = function(msg)
             print("|cFF00FF00/GW reset data|r - Apaga dados de aprendizado (GPH)")
             print("|cFF00FF00/GW reset all|r - Apaga TODOS os dados do addon")
             print("|cFF00FF00/GW history|r - Mostra o histórico gráfico de sessões")
-            print("|cFF00FF00/zd|r - Mostra dados da masmorra atual")
-            print("|cFF00FF00/zd all|r - Mostra dados de todas as masmorras")
+            print("|cFF00FF00/GW state|r - Mostra estado interno do addon")
             print("|cFFFFFF00================================|r")
         end
     end)
@@ -74,6 +90,7 @@ SlashCmdList["ZONEDATA"] = function(msg)
     end)
 end
 
+-- Inicialização principal
 function GW.Initialize()
     -- Configurar SavedVariables
     GW.DB = GoldWatchDB or {
@@ -81,16 +98,16 @@ function GW.Initialize()
         sessionStart = 0,
         startMoney = 0,
         locations = {},
-        earnings = {0, 0, 0},
+        earnings = {0, 0, 0},  -- Garantir que sempre seja {gold, silver, copper} numéricos
         lastSession = nil,
         lastZone = nil,
         historicalGPH = {},
-        hyperspawnAlerts = {},
         lootHistory = {},
         sessionHistory = {},
         isPaused = false,
         pauseStartTime = nil,
-        zoneData = {}
+        zoneData = {},
+        hyperspawnAlerts = {}  -- Adicionado para suporte ao hyperspawn
     }
     GoldWatchDB = GW.DB
     
@@ -98,10 +115,11 @@ function GW.Initialize()
     GW.Settings = GoldWatchSettings or {
         locale = "ptBR",
         showMinimap = true,
-        hyperspawnMode = "alert",
-        hyperspawnThreshold = 1.5,
+        hyperspawnMode = "alert",          -- Modo padrão: alerta
+        hyperspawnThreshold = 1.5,         -- 50% acima da média
         maxHistoricalSamples = 50,
-        alertSound = SOUNDKIT.RAID_WARNING
+        alertSound = SOUNDKIT.RAID_WARNING,
+        updateInterval = 3                 -- Novo: intervalo de atualização padrão de 3 segundos
     }
     GoldWatchSettings = GW.Settings
     
@@ -109,17 +127,12 @@ function GW.Initialize()
     GW.DB.earnings = GW.DB.earnings or {0, 0, 0}
     GW.DB.locations = GW.DB.locations or {}
     GW.DB.historicalGPH = GW.DB.historicalGPH or {}
-    GW.DB.hyperspawnAlerts = GW.DB.hyperspawnAlerts or {}
     GW.DB.lootHistory = GW.DB.lootHistory or {}
     GW.DB.sessionHistory = GW.DB.sessionHistory or {}
     GW.DB.isPaused = GW.DB.isPaused or false
     GW.DB.pauseStartTime = GW.DB.pauseStartTime or nil
     GW.DB.zoneData = GW.DB.zoneData or {}
-    
-    -- Inicializar histórico com valores padrão se estiver vazio
-    if #GW.DB.historicalGPH == 0 then
-        GW.DB.historicalGPH = {100000, 150000, 120000}
-    end
+    GW.DB.hyperspawnAlerts = GW.DB.hyperspawnAlerts or {}  -- Garantir existência
     
     -- Carregar módulos
     GW.Data.Initialize()
@@ -134,17 +147,18 @@ function GW.Initialize()
     -- Recuperar sessão anterior
     if GW.DB.isTracking then
         GW.Data.StartTracking(true)
+        -- Se estava pausado, continuar pausado até o tempo restante
         if GW.DB.isPaused then
             local elapsedPause = time() - GW.DB.pauseStartTime
-            if elapsedPause >= 600 then
-                GW.DB.isPaused = false
-            else
+            if elapsedPause < 600 then
                 C_Timer.After(600 - elapsedPause, function()
                     if GW.DB and GW.DB.isTracking and GW.DB.isPaused then
                         GW.DB.isPaused = false
                         GW.DB.sessionStart = GW.DB.sessionStart + 600
                     end
                 end)
+            else
+                GW.DB.isPaused = false
             end
         end
     end
@@ -179,7 +193,7 @@ function GW.Initialize()
     
     -- Popup para reset total
     StaticPopupDialogs["GOLDWATCH_CONFIRM_NUCLEAR_RESET"] = {
-        text = "Tem certeza que deseja apagar TODOS os dados?\nIsso inclui:\n- Histórico de sessões\n- Dados de aprendizado por masmorra\n- Histórico de alertas\nEsta ação não pode ser desfeita!",
+        text = "Tem certeza que deseja apagar TODOS os dados?\nIsso inclui:\n- Histórico de sessões\n- Dados de aprendizado por masmorra\n- Histórico de saque\n- Alertas de hyperspawn\nEsta ação não pode ser desfeita!",
         button1 = GW.L.GetString("YES"),
         button2 = GW.L.GetString("NO"),
         OnAccept = function()
@@ -196,57 +210,54 @@ function GW.Initialize()
     print(GW.L.GetString("LOADED"))
 end
 
+-- Reset otimizado usando table.clear
+local function wipeTable(tbl)
+    if type(tbl) ~= "table" then return end
+    for k in pairs(tbl) do
+        tbl[k] = nil
+    end
+end
+
 function GW.Reset(resetLevel)
     resetLevel = resetLevel or "session"
     
     if resetLevel == "all" then
         -- Apaga TUDO: completo reset
+        wipeTable(GW.DB)
         GW.DB = {
             isTracking = false,
             sessionStart = 0,
             startMoney = 0,
             locations = {},
-            earnings = {0, 0, 0},
+            earnings = {0, 0, 0},  -- Garantir valores numéricos
             lastSession = nil,
             lastZone = nil,
             historicalGPH = {},
-            hyperspawnAlerts = {},
             lootHistory = {},
             sessionHistory = {},
             isPaused = false,
             pauseStartTime = nil,
-            zoneData = {}
+            zoneData = {},
+            hyperspawnAlerts = {}  -- Mantido para consistência
         }
     elseif resetLevel == "data" then
         -- Apaga apenas dados de aprendizado
-        GW.DB.historicalGPH = {}
-        GW.DB.zoneData = {}
-        GW.DB.hyperspawnAlerts = {}
+        wipeTable(GW.DB.historicalGPH)
+        wipeTable(GW.DB.zoneData)
+        wipeTable(GW.DB.lootHistory)
+        wipeTable(GW.DB.hyperspawnAlerts)  -- Limpar alertas também
         
         print("|cFF00FF00Dados de aprendizado apagados!|r")
     else
         -- Reset padrão: apenas sessão atual
-        local sessionHistory = GW.DB.sessionHistory or {}
-        local historicalGPH = GW.DB.historicalGPH or {}
-        local lastSession = GW.DB.lastSession
-        local zoneData = GW.DB.zoneData or {}
-        
-        GW.DB = {
-            isTracking = false,
-            sessionStart = 0,
-            startMoney = 0,
-            locations = {},
-            earnings = {0, 0, 0},
-            lastSession = lastSession,
-            lastZone = nil,
-            historicalGPH = historicalGPH,
-            hyperspawnAlerts = {},
-            lootHistory = {},
-            sessionHistory = sessionHistory,
-            isPaused = false,
-            pauseStartTime = nil,
-            zoneData = zoneData
-        }
+        GW.DB.isTracking = false
+        GW.DB.sessionStart = 0
+        GW.DB.startMoney = 0
+        GW.DB.locations = {}
+        GW.DB.earnings = {0, 0, 0}  -- Garantir valores numéricos
+        GW.DB.isPaused = false
+        GW.DB.pauseStartTime = nil
+        GW.DB.hyperspawnAlerts = {}  -- Limpar alertas da sessão
         
         print("|cFF00FF00Sessão reiniciada!|r")
     end

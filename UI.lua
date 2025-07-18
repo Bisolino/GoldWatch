@@ -454,9 +454,8 @@ function GW.UI.UpdateConfigWindow()
         info.func = function() 
             GW.Settings.locale = "ptBR"
             GW.UI.UpdateAllTexts()
-            GW.History.UpdateHistoryTexts()
+            if GW.History then GW.History.UpdateHistoryTexts() end
             print(format(GW.L.GetString("LOCALE_CHANGED"), GW.L.GetString("LANGUAGE_PORTUGUESE")))
-            -- Recriar menus após mudança
             GW.UI.UpdateConfigWindow()
         end
         UIDropDownMenu_AddButton(info)
@@ -466,7 +465,7 @@ function GW.UI.UpdateConfigWindow()
         info.func = function() 
             GW.Settings.locale = "enUS"
             GW.UI.UpdateAllTexts()
-            GW.History.UpdateHistoryTexts()
+            if GW.History then GW.History.UpdateHistoryTexts() end
             print(format(GW.L.GetString("LOCALE_CHANGED"), GW.L.GetString("LANGUAGE_ENGLISH")))
             GW.UI.UpdateConfigWindow()
         end
@@ -477,11 +476,23 @@ function GW.UI.UpdateConfigWindow()
         info.func = function() 
             GW.Settings.locale = "esMX"
             GW.UI.UpdateAllTexts()
-            GW.History.UpdateHistoryTexts()
+            if GW.History then GW.History.UpdateHistoryTexts() end
             print(format(GW.L.GetString("LOCALE_CHANGED"), GW.L.GetString("LANGUAGE_SPANISH")))
             GW.UI.UpdateConfigWindow()
         end
         UIDropDownMenu_AddButton(info)
+        
+        info.text = GW.L.GetString("LANGUAGE_GERMAN")
+        info.value = "deDE"
+        info.func = function() 
+            GW.Settings.locale = "deDE"
+            GW.UI.UpdateAllTexts()
+            if GW.History then GW.History.UpdateHistoryTexts() end
+            print(format(GW.L.GetString("LOCALE_CHANGED"), GW.L.GetString("LANGUAGE_GERMAN")))
+            GW.UI.UpdateConfigWindow()
+        end
+        UIDropDownMenu_AddButton(info)
+
     end)
     UIDropDownMenu_SetSelectedValue(GW.UI.configFrame.languageDropdown, GW.Settings.locale)
     

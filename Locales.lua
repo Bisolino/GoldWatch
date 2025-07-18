@@ -3,7 +3,7 @@ local addonName, GW = ...
 GW.L = {
     ptBR = {
         TITLE = "Rastreador de Ouro",
-        LOADED = "Rastreador de Ouro v1.0 carregado. Digite /gw ou /goldwatch",
+        LOADED = "Rastreador de Ouro v1.1 carregado. Digite /gw ou /goldwatch",
         START_TRACKING = "Rastreamento iniciado",
         STOP_TRACKING = "Rastreamento parado",
         RESUME_TRACKING = "Rastreamento retomado",
@@ -42,7 +42,7 @@ GW.L = {
         HYPERSPAWN_ALERT = "ALERTA: GPH %.0f%% acima da média!",
         HYPERSPAWN_ALERTS = "ALERTAS DE HYPERSPAWN",
         ABOVE_AVERAGE = "acima da média",
-        HISTORY_TITLE = "Histórico Completo de Sessões",  -- NOVA CHAVE
+        HISTORY_TITLE = "Histórico Completo de Sessões",
         HYPERSPAWN_SETTINGS = "Configurações Anti-Hyperspawn",
         OPERATION_MODE = "Modo de operação:",
         ALERT_ONLY = "Apenas Alertar",
@@ -73,13 +73,14 @@ GW.L = {
         SOUND_DEFAULT = "Padrão",
         SOUND_CRITICAL = "Crítico",
         SOUND_INFO = "Informação",
+	UPDATE_INTERVAL = "Intervalo de Atualização",
         RELOAD_SUGGESTION = "Histórico apagado! Recarregue a interface para aplicar as mudanças.",
         RELOAD_BUTTON = "Recarregar UI",
         CANCEL = "Cancelar"
     },
     enUS = {
         TITLE = "GoldWatch",
-        LOADED = "GoldWatch v1.0 loaded. Type /gw or /goldwatch",
+        LOADED = "GoldWatch v1.1 loaded. Type /gw or /goldwatch",
         START_TRACKING = "Tracking started",
         STOP_TRACKING = "Tracking stopped",
         RESUME_TRACKING = "Tracking resumed",
@@ -118,7 +119,7 @@ GW.L = {
         HYPERSPAWN_ALERT = "ALERT: GPH %.0f%% above average!",
         HYPERSPAWN_ALERTS = "HYPERSPAWN ALERTS",
         ABOVE_AVERAGE = "above average",
-        HISTORY_TITLE = "Full Session History",  -- NOVA CHAVE
+        HISTORY_TITLE = "Full Session History",
         HYPERSPAWN_SETTINGS = "Anti-Hyperspawn Settings",
         OPERATION_MODE = "Operation mode:",
         ALERT_ONLY = "Alert Only",
@@ -149,13 +150,14 @@ GW.L = {
         SOUND_DEFAULT = "Default",
         SOUND_CRITICAL = "Critical",
         SOUND_INFO = "Information",
+	UPDATE_INTERVAL = "Update Interval",
         RELOAD_SUGGESTION = "History deleted! Reload UI to apply changes.",
         RELOAD_BUTTON = "Reload UI",
         CANCEL = "Cancel"
     },
     esMX = {
         TITLE = "Rastreador de Oro",
-        LOADED = "Rastreador de Oro v1.0 cargado. Escribe /GW o /goldwatch",
+        LOADED = "Rastreador de Oro v1.1 cargado. Escribe /GW o /goldwatch",
         START_TRACKING = "Rastreo iniciado",
         STOP_TRACKING = "Rastreo detenido",
         RESUME_TRACKING = "Rastreo reanudado",
@@ -194,7 +196,7 @@ GW.L = {
         HYPERSPAWN_ALERT = "¡ALERTA: GPH %.0f%% arriba del promedio!",
         HYPERSPAWN_ALERTS = "ALERTAS DE HYPERSPAWN",
         ABOVE_AVERAGE = "arriba del promedio",
-        HISTORY_TITLE = "Historial Completo de Sesiones",  -- NOVA CHAVE
+        HISTORY_TITLE = "Historial Completo de Sesiones",
         HYPERSPAWN_SETTINGS = "Configuración Anti-Hyperspawn",
         OPERATION_MODE = "Modo de operación:",
         ALERT_ONLY = "Solo Alertar",
@@ -225,14 +227,23 @@ GW.L = {
         SOUND_DEFAULT = "Predeterminado",
         SOUND_CRITICAL = "Crítico",
         SOUND_INFO = "Información",
+	UPDATE_INTERVAL = "Intervalo de actualización",
         RELOAD_SUGGESTION = "¡Historial borrado! Recarga la interfaz para aplicar los cambios.",
         RELOAD_BUTTON = "Recargar UI",
         CANCEL = "Cancelar"
     }
 }
 
+-- Função corrigida para não depender de GW.Settings
 function GW.L.GetString(key)
+    -- Acessar diretamente as SavedVariables
     local settings = GoldWatchSettings or {}
     local locale = settings.locale or "ptBR"
+    
+    -- Fallback para inglês se o locale não existir
+    if not GW.L[locale] then
+        locale = "enUS"
+    end
+    
     return GW.L[locale][key] or key
 end

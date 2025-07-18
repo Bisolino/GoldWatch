@@ -1,6 +1,12 @@
 local addonName, GW = ...
 local floor, format = math.floor, string.format
 
+-- Constantes de otimização
+local DEFAULT_UPDATE_INTERVAL = 3  -- Valor padrão de 3 segundos
+local HEADER_COLOR = {1, 1, 1}
+local VALUE_COLOR = {1, 1, 1}
+local GPH_COLOR = {1, 0.82, 0}
+
 -- Função auxiliar para criar labels
 local function CreateLabel(parent, text, point, relative, relPoint, x, y, color, font)
     local label = parent:CreateFontString(nil, "ARTWORK", font or "GameFontNormal")
@@ -13,12 +19,12 @@ local function CreateLabel(parent, text, point, relative, relPoint, x, y, color,
 end
 
 function GW.UI.Create()
-    GW.UI.labels = {}  -- Inicializar tabela de labels
+    GW.UI.labels = {}
     GW.UI.frame = _G["GoldWatchFrame"]
     local frame = GW.UI.frame
     
     -- Tamanho do frame principal
-    frame:SetSize(380, 450)
+    frame:SetSize(380, 350)
     
     -- Fundo com textura de pergaminho
     local bg = frame:CreateTexture(nil, "BACKGROUND")
@@ -74,14 +80,14 @@ function GW.UI.Create()
     headerBg:SetHeight(25)
     
     -- Armazenar labels na tabela GW.UI.labels
-    GW.UI.labels.currentLocation = CreateLabel(frame, GW.L.GetString("CURRENT_LOCATION"), "LEFT", headerBg, "LEFT", 10, 0, {1, 1, 1}, "GameFontNormalSmall")
-    GW.UI.labels.sessionTime = CreateLabel(frame, GW.L.GetString("SESSION_TIME"), "CENTER", headerBg, "CENTER", 0, 0, {1, 1, 1}, "GameFontNormalSmall")
-    GW.UI.labels.goldPerHour = CreateLabel(frame, GW.L.GetString("GOLD_PER_HOUR"), "RIGHT", headerBg, "RIGHT", -10, 0, {1, 1, 1}, "GameFontNormalSmall")
+    GW.UI.labels.currentLocation = CreateLabel(frame, GW.L.GetString("CURRENT_LOCATION"), "LEFT", headerBg, "LEFT", 10, 0, HEADER_COLOR, "GameFontNormalSmall")
+    GW.UI.labels.sessionTime = CreateLabel(frame, GW.L.GetString("SESSION_TIME"), "CENTER", headerBg, "CENTER", 0, 0, HEADER_COLOR, "GameFontNormalSmall")
+    GW.UI.labels.goldPerHour = CreateLabel(frame, GW.L.GetString("GOLD_PER_HOUR"), "RIGHT", headerBg, "RIGHT", -10, 0, HEADER_COLOR, "GameFontNormalSmall")
 
     -- Valores dinâmicos
     GW.UI.locationText = CreateLabel(frame, GW.Data.GetCurrentZone(), "LEFT", headerBg, "BOTTOMLEFT", 10, -5, nil, "GameFontHighlight")
     GW.UI.timeText = CreateLabel(frame, "00:00:00", "CENTER", headerBg, "BOTTOM", 0, -5, nil, "GameFontHighlight")
-    GW.UI.gphText = CreateLabel(frame, "0g 0s 0c", "RIGHT", headerBg, "BOTTOMRIGHT", -10, -5, {1, 0.82, 0}, "GameFontHighlight")
+    GW.UI.gphText = CreateLabel(frame, "0g 0s 0c", "RIGHT", headerBg, "BOTTOMRIGHT", -10, -5, GPH_COLOR, "GameFontHighlight")
 
     -- Seção de ganhos
     local earningsBg = frame:CreateTexture(nil, "ARTWORK")
@@ -92,11 +98,11 @@ function GW.UI.Create()
     earningsBg:SetPoint("RIGHT", -15, 0)
     earningsBg:SetHeight(60)
     
-    GW.UI.labels.sessionEarnings = CreateLabel(frame, GW.L.GetString("SESSION_EARNINGS"), "TOPLEFT", earningsBg, "TOPLEFT", 10, -5, {1, 1, 1}, "GameFontNormal")
-    GW.UI.earningsText = CreateLabel(frame, "0g 0s 0c", "BOTTOMLEFT", earningsBg, "BOTTOMLEFT", 10, 5, {1, 1, 1}, "GameFontHighlight")
+    GW.UI.labels.sessionEarnings = CreateLabel(frame, GW.L.GetString("SESSION_EARNINGS"), "TOPLEFT", earningsBg, "TOPLEFT", 10, -5, HEADER_COLOR, "GameFontNormal")
+    GW.UI.earningsText = CreateLabel(frame, "0g 0s 0c", "BOTTOMLEFT", earningsBg, "BOTTOMLEFT", 10, 5, VALUE_COLOR, "GameFontHighlight")
     
-    GW.UI.labels.projection = CreateLabel(frame, GW.L.GetString("PROJECTION"), "TOPRIGHT", earningsBg, "TOPRIGHT", -10, -5, {1, 1, 1}, "GameFontNormal")
-    GW.UI.projectionText = CreateLabel(frame, "0g 0s 0c", "BOTTOMRIGHT", earningsBg, "BOTTOMRIGHT", -10, 5, {1, 1, 1}, "GameFontHighlight")
+    GW.UI.labels.projection = CreateLabel(frame, GW.L.GetString("PROJECTION"), "TOPRIGHT", earningsBg, "TOPRIGHT", -10, -5, HEADER_COLOR, "GameFontNormal")
+    GW.UI.projectionText = CreateLabel(frame, "0g 0s 0c", "BOTTOMRIGHT", earningsBg, "BOTTOMRIGHT", -10, 5, VALUE_COLOR, "GameFontHighlight")
 
     -- Seção de última sessão
     local lastSessionBg = frame:CreateTexture(nil, "ARTWORK")
@@ -107,7 +113,7 @@ function GW.UI.Create()
     lastSessionBg:SetPoint("RIGHT", -15, 0)
     lastSessionBg:SetHeight(90)
 
-    GW.UI.labels.lastSession = CreateLabel(frame, GW.L.GetString("LAST_SESSION"), "TOP", lastSessionBg, "TOP", 0, -5, {1, 1, 1}, "GameFontNormal")
+    GW.UI.labels.lastSession = CreateLabel(frame, GW.L.GetString("LAST_SESSION"), "TOP", lastSessionBg, "TOP", 0, -5, HEADER_COLOR, "GameFontNormal")
 
     -- Container para organizar as informações
     GW.UI.lastSessionContainer = CreateFrame("Frame", nil, frame)
@@ -171,11 +177,12 @@ function GW.UI.Create()
     -- Estado inicial
     GW.UI.UpdateButtonStates()
 
-    -- Atualização periódica
+    -- Atualização periódica otimizada
     frame.updateTimer = 0
     frame:SetScript("OnUpdate", function(self, elapsed)
         self.updateTimer = self.updateTimer + elapsed
-        if self.updateTimer > 1 then
+        local interval = GW.Settings and GW.Settings.updateInterval or DEFAULT_UPDATE_INTERVAL
+        if self.updateTimer > interval then
             GW.SafeCall(GW.UI.UpdateDisplay)
             self.updateTimer = 0
         end
@@ -227,7 +234,7 @@ function GW.UI.CreateConfigWindow()
     if GW.UI.configFrame then return end
     
     local frame = CreateFrame("Frame", "GoldWatchConfigFrame", UIParent)
-    frame:SetSize(300, 400)
+    frame:SetSize(250, 450)
     frame:SetPoint("CENTER")
     frame:SetFrameStrata("DIALOG")
     frame:SetMovable(true)
@@ -277,9 +284,9 @@ function GW.UI.CreateConfigWindow()
     
     frame.soundDropdown = CreateFrame("Frame", "GWSoundDropdown", frame, "UIDropDownMenuTemplate")
     frame.soundDropdown:SetPoint("TOPLEFT", frame.soundLabel, "BOTTOMLEFT", 0, -5)
-    UIDropDownMenu_SetWidth(frame.soundDropdown, 180)
+    UIDropDownMenu_SetWidth(frame.soundDropdown, 150)
     
-    -- Configurações Anti-Hyperspawn
+    -- Configurações Anti-Hyperspawn (REINTEGRADO)
     yOffset = yOffset - 50
     frame.hyperspawnHeader = CreateLabel(frame, GW.L.GetString("HYPERSPAWN_SETTINGS"), "TOPLEFT", frame, "TOPLEFT", 20, yOffset, {1, 0.8, 0})
     
@@ -288,7 +295,7 @@ function GW.UI.CreateConfigWindow()
     
     frame.hyperspawnModeDropdown = CreateFrame("Frame", "GW_HyperspawnModeDropdown", frame, "UIDropDownMenuTemplate")
     frame.hyperspawnModeDropdown:SetPoint("TOPLEFT", frame.hyperspawnModeLabel, "BOTTOMLEFT", 0, -5)
-    UIDropDownMenu_SetWidth(frame.hyperspawnModeDropdown, 180)
+    UIDropDownMenu_SetWidth(frame.hyperspawnModeDropdown, 150)
     
     -- Limite de detecção
     yOffset = yOffset - 70
@@ -312,6 +319,50 @@ function GW.UI.CreateConfigWindow()
             (value - 1) * 100)
         )
     end)
+    
+    -- Intervalo de atualização
+    yOffset = yOffset - 60
+    frame.intervalLabel = CreateLabel(frame, GW.L.GetString("UPDATE_INTERVAL"), "TOPLEFT", frame, "TOPLEFT", 20, yOffset)
+    
+    frame.intervalSlider = CreateFrame("Slider", "GW_UpdateIntervalSlider", frame, "OptionsSliderTemplate")
+    frame.intervalSlider:SetPoint("TOPLEFT", frame.intervalLabel, "BOTTOMLEFT", 0, -14)
+    frame.intervalSlider:SetWidth(200)
+    frame.intervalSlider:SetMinMaxValues(1, 5)
+    frame.intervalSlider:SetValueStep(1)
+    frame.intervalSlider:SetObeyStepOnDrag(true)
+    _G[frame.intervalSlider:GetName().."Low"]:SetText("1s")
+    _G[frame.intervalSlider:GetName().."High"]:SetText("5s")
+    
+    -- Texto descritivo
+    frame.intervalSlider.text = _G[frame.intervalSlider:GetName().."Text"]
+    frame.intervalSlider.text:SetText(format("%d segundos", GW.Settings.updateInterval or DEFAULT_UPDATE_INTERVAL))
+    
+    -- Configurar evento de mudança
+    frame.intervalSlider:SetScript("OnValueChanged", function(self, value)
+        value = floor(value)
+        GW.Settings.updateInterval = value
+        self.text:SetText(format("%d segundos", value))
+        
+        -- Atualizar imediatamente para feedback visual
+        if GW.UI.frame then
+            GW.UI.frame.updateTimer = 0
+        end
+    end)
+    
+    -- Tooltip explicativa
+    frame.intervalSlider:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_TOP")
+        GameTooltip:SetText(GW.L.GetString("UPDATE_INTERVAL_TT"), 1, 1, 1)
+        GameTooltip:AddLine("1s = Mais fluido (mais CPU)\n5s = Mais leve (menos atualizações)", 1, 1, 1, true)
+        GameTooltip:Show()
+    end)
+    frame.intervalSlider:SetScript("OnLeave", GameTooltip_Hide)
+    
+    -- Definir valor inicial
+    frame.intervalSlider:SetValue(GW.Settings.updateInterval or DEFAULT_UPDATE_INTERVAL)
+
+    -- Espaço antes do botão Fechar
+    yOffset = yOffset - 80  -- Aumentado para dar mais espaço
     
     -- Botão Fechar
     frame.closeButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
@@ -465,6 +516,10 @@ function GW.UI.UpdateConfigWindow()
     
     -- Atualizar o checkbox do minimapa
     GW.UI.configFrame.minimapCheckbox:SetChecked(GW.Settings.showMinimap)
+    
+    -- Atualizar o slider de intervalo
+    GW.UI.configFrame.intervalSlider:SetValue(GW.Settings.updateInterval or DEFAULT_UPDATE_INTERVAL)
+    GW.UI.configFrame.intervalSlider.text:SetText(format("%d segundos", GW.Settings.updateInterval or DEFAULT_UPDATE_INTERVAL))
 end
 
 function GW.UI.ToggleConfigWindow()
@@ -506,74 +561,35 @@ function GW.UI.UpdateDisplay()
     
     -- Ganhos formatados
     if GW.DB and GW.DB.earnings then
-        local g = GW.DB.earnings[1] or 0
-        local s = GW.DB.earnings[2] or 0
-        local c = GW.DB.earnings[3] or 0
-        
-        -- Tratamento para valores negativos
-        local sign = ""
-        if g < 0 or s < 0 or c < 0 then
-            sign = "-"
-            g = math.abs(g)
-            s = math.abs(s)
-            c = math.abs(c)
-        end
-        
-        GW.UI.earningsText:SetText(format("%s%dg %ds %dc", sign, g, s, c))
+        local totalCopper = GW.Util.MoneyTableToCopper(GW.DB.earnings)
+        GW.UI.earningsText:SetText(GW.Util.FormatMoney(totalCopper, "colored"))
     end
     
     -- Projeção e GPH
     if GW.DB and GW.DB.isTracking and GW.DB.sessionStart > 0 and (time() - GW.DB.sessionStart) > 5 then
-        local g, s, c = GW.Data.GetHourlyRate()
-        
-        -- Garantir que GPH não seja negativo
-        g = math.max(g, 0)
-        s = math.max(s, 0)
-        c = math.max(c, 0)
-        
-        GW.UI.projectionText:SetText(format("%dg %ds %dc", g, s, c))
-        GW.UI.gphText:SetText(format("%dg %ds %dc", g, s, c))
+        local gphCopper = GW.Data.GetCurrentGPHCopper()
+        GW.UI.projectionText:SetText(GW.Util.FormatMoney(gphCopper, "colored"))
+        GW.UI.gphText:SetText(GW.Util.FormatMoney(gphCopper, "colored"))
     else
-        GW.UI.projectionText:SetText("0g 0s 0c")
-        GW.UI.gphText:SetText("0g 0s 0c")
+        GW.UI.projectionText:SetText(GW.Util.FormatMoney(0, "colored"))
+        GW.UI.gphText:SetText(GW.Util.FormatMoney(0, "colored"))
     end
     
     -- Última sessão
     if GW.DB and GW.DB.lastSession then
-        local timeStr = GW.Util.FormatTime(GW.DB.lastSession.elapsed)
-        local earnings = GW.DB.lastSession.earnings
-        local g = earnings[1] or 0
-        local s = earnings[2] or 0
-        local c = earnings[3] or 0
+        GW.UI.lastSessionTime:SetText(GW.Util.FormatTime(GW.DB.lastSession.elapsed))
         
-        -- Tratamento para valores negativos
-        local sign = ""
-        if g < 0 or s < 0 or c < 0 then
-            sign = "-"
-            g = math.abs(g)
-            s = math.abs(s)
-            c = math.abs(c)
-        end
-        local earningsStr = format("%s%dg %ds %dc", sign, g, s, c)
+        local earningsCopper = GW.Util.MoneyTableToCopper(GW.DB.lastSession.earnings)
+        GW.UI.lastSessionEarnings:SetText(GW.Util.FormatMoney(earningsCopper, "colored"))
         
-        local gph = GW.DB.lastSession.gph or {0, 0, 0}
-        local gh = math.max(gph[1] or 0, 0)
-        local gs = math.max(gph[2] or 0, 0)
-        local gc = math.max(gph[3] or 0, 0)
-        local gphStr = format("%dg %ds %dc", gh, gs, gc)
+        local gphCopper = GW.Util.MoneyTableToCopper(GW.DB.lastSession.gph)
+        GW.UI.lastSessionGPH:SetText(GW.Util.FormatMoney(gphCopper, "colored"))
         
-        -- Localização da última sessão
-        local location = GW.DB.lastSession.mainZone or GW.L.GetString("UNKNOWN_ZONE")
-        
-        -- Atualizar os elementos
-        GW.UI.lastSessionTime:SetText(timeStr)
-        GW.UI.lastSessionEarnings:SetText(earningsStr)
-        GW.UI.lastSessionGPH:SetText(gphStr)
-        GW.UI.lastSessionLocation:SetText(location)
+        GW.UI.lastSessionLocation:SetText(GW.DB.lastSession.mainZone)
     else
         GW.UI.lastSessionTime:SetText("00:00:00")
-        GW.UI.lastSessionEarnings:SetText("0g 0s 0c")
-        GW.UI.lastSessionGPH:SetText("0g 0s 0c")
+        GW.UI.lastSessionEarnings:SetText(GW.Util.FormatMoney(0, "colored"))
+        GW.UI.lastSessionGPH:SetText(GW.Util.FormatMoney(0, "colored"))
         GW.UI.lastSessionLocation:SetText(GW.L.GetString("UNKNOWN_ZONE"))
     end
     
@@ -639,6 +655,7 @@ function GW.UI.UpdateAllTexts()
         GW.UI.configFrame.hyperspawnModeLabel:SetText(GW.L.GetString("OPERATION_MODE"))
         GW.UI.configFrame.thresholdLabel:SetText(GW.L.GetString("DETECTION_THRESHOLD"))
         GW.UI.configFrame.closeButton:SetText(GW.L.GetString("CLOSE_BUTTON"))
+        GW.UI.configFrame.intervalLabel:SetText(GW.L.GetString("UPDATE_INTERVAL"))
         
         -- Atualizar textos do dropdown
         UIDropDownMenu_Initialize(GW.UI.configFrame.hyperspawnModeDropdown, function()
@@ -673,7 +690,7 @@ function GW.UI.ToggleWindow()
     end
 end
 
--- Sistema Anti-Hyperspawn: Alerta visual
+-- Sistema Anti-Hyperspawn: Alerta visual (REINTEGRADO)
 function GW.UI.CreateHyperspawnAlertFrame()
     if GW.UI.hyperspawnAlert then return end
     
@@ -715,7 +732,9 @@ function GW.UI.ShowHyperspawnAlert(percentage)
     frame:Show()
     
     -- Tocar som de alerta
-    PlaySound(GW.Settings.alertSound)
+    if GW.Settings.alertSound then
+        PlaySound(GW.Settings.alertSound)
+    end
     
     frame.flashAnim = frame:CreateAnimationGroup()
     

@@ -1,5 +1,13 @@
 local addonName, GW = ...
 
+-- Função para limpar tabelas de forma segura
+local function wipeTable(tbl)
+    if not tbl then return end
+    for k in pairs(tbl) do
+        tbl[k] = nil
+    end
+end
+
 -- Função auxiliar para criar labels
 local function CreateLabel(parent, text, point, relative, relPoint, x, y, color, font)
     local label = parent:CreateFontString(nil, "OVERLAY", font or "GameFontNormal")
@@ -30,18 +38,18 @@ function GW.History.ShowHistoryWindow()
         frame:Hide()
         GW.UI.historyFrame = frame
         
-        -- FUNDO: Mesmo das configurações (cinza escuro)
+        -- Fundo
         local bg = frame:CreateTexture(nil, "BACKGROUND")
         bg:SetTexture("Interface\\DialogFrame\\UI-DialogBox-Background")
         bg:SetAllPoints(frame)
         
-        -- BORDA: Mesmo estilo das configurações (cinza mais escuro)
+        -- Borda
         local border = frame:CreateTexture(nil, "BORDER")
         border:SetColorTexture(0, 0, 0, 0)
         border:SetPoint("TOPLEFT", -1, 4)
         border:SetPoint("BOTTOMRIGHT", 4, -4)
         
-        -- Título com mesmo estilo das configurações
+        -- Título
         frame.title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         frame.title:SetPoint("TOP", 0, -15)
         frame.title:SetText(GW.L.GetString("HISTORY_TITLE"))
@@ -81,7 +89,7 @@ function GW.History.ShowHistoryWindow()
         -- Inicializar lista de entradas
         frame.entries = {}
         
-        -- Cabeçalhos com mesma cor das configurações
+        -- Cabeçalhos
         frame.headers = CreateFrame("Frame", nil, frame)
         frame.headers:SetPoint("TOPLEFT", frame.scrollFrame, "TOPLEFT", 0, 0)
         frame.headers:SetSize(frame.scrollFrame:GetWidth(), 25)
@@ -95,7 +103,7 @@ function GW.History.ShowHistoryWindow()
             { name = "gph",       label = "GPH",            width = 120, position = 530,  justify = "CENTER" }
         }
         
-        -- Cores dos cabeçalhos: Branco como na imagem
+        -- Cores dos cabeçalhos
         local headerColor = {1, 1, 1}
         
         -- Criar cabeçalhos
@@ -120,14 +128,14 @@ function GW.History.ShowHistoryWindow()
     local content = frame.content
     local entries = frame.entries
     
-    -- Limpar conteúdo anterior COMPLETAMENTE
+    -- Limpar conteúdo anterior
     for i = 1, #entries do
         if entries[i] then
             entries[i]:Hide()
             entries[i] = nil
         end
     end
-    frame.entries = {}
+    wipeTable(frame.entries)
     
     -- Remover label de sem dados se existir
     if frame.noDataLabel then
@@ -135,12 +143,23 @@ function GW.History.ShowHistoryWindow()
         frame.noDataLabel = nil
     end
     
+    -- Pré-formatar sessões para cache
+    local formattedSessions = {}
+    for i, session in ipairs(GW.DB.sessionHistory) do
+        formattedSessions[i] = {
+            date = date("%d/%m %H:%M", session.startTime),
+            duration = GW.Util.FormatTime(session.elapsed),
+            earnings = GW.Util.FormatMoneyTable(session.earnings, "short"),
+            gph = GW.Util.FormatMoneyTable(session.gph, "short"),
+            location = session.mainZone or GW.L.GetString("UNKNOWN_ZONE")
+        }
+    end
+    
     -- Preencher com o histórico
     local yOffset = -10
     local index = 1
     
-    -- Ordenar do mais recente para o mais antigo
-    for i, session in ipairs(GW.DB.sessionHistory) do
+    for i, session in ipairs(formattedSessions) do
         local entry = CreateFrame("Frame", nil, content)
         entry:SetSize(content:GetWidth(), 30)
         frame.entries[index] = entry
@@ -166,25 +185,12 @@ function GW.History.ShowHistoryWindow()
         entry:SetPoint("TOPLEFT", content, "TOPLEFT", 0, yOffset)
         entry:Show()
         
-        -- Formatar dados
-        local dateStr = date("%d/%m %H:%M", session.startTime)
-        local timeStr = GW.Util.FormatTime(session.elapsed)
-        local earnings = session.earnings or {0, 0, 0}
-        local g = earnings[1] or 0
-        local s = earnings[2] or 0
-        local c = earnings[3] or 0
-        local gph = session.gph or {0, 0, 0}
-        local gph_g = gph[1] or 0
-        local gph_s = gph[2] or 0
-        local gph_c = gph[3] or 0
-        local location = session.mainZone or GW.L.GetString("UNKNOWN_ZONE")
-
-        -- Definir textos
-        entry.date:SetText(dateStr)
-        entry.location:SetText(location)
-        entry.duration:SetText(timeStr)
-        entry.earnings:SetText(format("%dg %ds %dc", g, s, c))
-        entry.gph:SetText(format("%dg %ds %dc", gph_g, gph_s, gph_c))
+        -- Definir textos usando dados pré-formatados
+        entry.date:SetText(session.date)
+        entry.location:SetText(session.location)
+        entry.duration:SetText(session.duration)
+        entry.earnings:SetText(session.earnings)
+        entry.gph:SetText(session.gph)
         
         yOffset = yOffset - 35
         index = index + 1
@@ -216,19 +222,15 @@ function GW.History.RefreshWindow()
     end
 end
 
--- Função para apagar todo o histórico CORRIGIDA
+-- Função para apagar todo o histórico
 function GW.History.DeleteAllHistory()
-    -- Resetar COMPLETAMENTE o histórico visível
-    GW.DB.sessionHistory = {}
+    -- Resetar o histórico visível
+    wipeTable(GW.DB.sessionHistory)
     GoldWatchDB.sessionHistory = {}
     
-    -- Limpar alertas de hyperspawn
-    GW.DB.hyperspawnAlerts = {}
-    
     -- Limpar histórico de saque
-    GW.DB.lootHistory = {}
+    wipeTable(GW.DB.lootHistory)
     
-    -- MANTER dados por masmorra e histórico de GPH
     print(GW.L.GetString("HISTORY_DELETED"))
     print("|cFF00FF00Nota: Dados de aprendizado por masmorra foram preservados.|r")
     
@@ -241,21 +243,20 @@ end
 
 -- Função para atualizar textos quando o idioma muda
 function GW.History.UpdateHistoryTexts()
-    if GW.UI.historyFrame then
-        -- Atualizar título
-        GW.UI.historyFrame.title:SetText(GW.L.GetString("HISTORY_TITLE"))
-        GW.UI.historyFrame.title:SetJustifyH("CENTER")
-        
-        -- Atualizar botões
-        GW.UI.historyFrame.closeButton:SetText(GW.L.GetString("CLOSE_BUTTON"))
-        GW.UI.historyFrame.deleteButton:SetText(GW.L.GetString("DELETE_HISTORY_BUTTON"))
-        
-        -- Atualizar cabeçalhos
-        for _, col in ipairs(GW.UI.historyFrame.headers.columns) do
-            GW.UI.historyFrame.headers[col.name]:SetText(GW.L.GetString(col.label))
-        end
-        
-        -- Recriar conteúdo com novos textos
-        GW.History.RefreshWindow()
+    if not GW.UI.historyFrame then return end
+    
+    -- Atualizar título
+    GW.UI.historyFrame.title:SetText(GW.L.GetString("HISTORY_TITLE"))
+    
+    -- Atualizar botões
+    GW.UI.historyFrame.closeButton:SetText(GW.L.GetString("CLOSE_BUTTON"))
+    GW.UI.historyFrame.deleteButton:SetText(GW.L.GetString("DELETE_HISTORY_BUTTON"))
+    
+    -- Atualizar cabeçalhos
+    for _, col in ipairs(GW.UI.historyFrame.headers.columns) do
+        GW.UI.historyFrame.headers[col.name]:SetText(GW.L.GetString(col.label))
     end
+    
+    -- Recriar conteúdo com novos textos
+    GW.History.RefreshWindow()
 end

@@ -1,16 +1,16 @@
 [![Downloads](https://cf.way2muchnoise.eu/full_goldwatch-gw_downloads.svg)](https://www.curseforge.com/wow/addons/goldwatch-gw)
 [![Version](https://img.shields.io/badge/Version-1.1.0-blue)](https://www.curseforge.com/wow/addons/goldwatch-gw)
 [![Stability](https://img.shields.io/badge/Stability-98%25-success)](https://github.com/Bisolino/GoldWatch)
-[![Retail](https://img.shields.io/badge/Retail-Soportado-green)] 
-[![Classic](https://img.shields.io/badge/Classic-Soportado-green)] 
-[![Era](https://img.shields.io/badge/Era-Soportado-green)] 
-[![MoP](https://img.shields.io/badge/MoP_Classic-Soportado-green)]
+[![Retail](https://img.shields.io/badge/Retail-Suportado-green)] 
+[![Classic](https://img.shields.io/badge/Classic-Suportado-green)] 
+[![Era](https://img.shields.io/badge/Era-Suportado-green)] 
+[![MoP](https://img.shields.io/badge/MoP_Classic-Suportado-green)]
 
-# GoldWatch - Rastreador Avanzado de Oro para WoW
+# GoldWatch - Rastreador de Ouro Avançado para WoW
 
-**GoldWatch v1.1.0** es el rastreador de oro definitivo para World of Warcraft, con arquitectura modular, detección inteligente de hyperspawn e historial visual completo. ¡Totalmente optimizado y con soporte multilingüe!
+**GoldWatch v1.1.0** é o tracker de ouro definitivo para World of Warcraft, com arquitetura modular, detecção inteligente de hyperspawn e histórico visual completo. Totalmente otimizado e com suporte multilíngue!
 
-## ✅ Compatibilidad Multi-Versión
+## ✅ Compatibilidade Multi-Versão
 - **Retail**
 - **Classic Era**
 - **Cata Classic**

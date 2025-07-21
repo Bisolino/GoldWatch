@@ -11,7 +11,7 @@
 **GoldWatch v1.1.0** is the ultimate gold tracker for World of Warcraft, featuring modular architecture, intelligent hyperspawn detection, and full visual history. Fully optimized with multi-language support!
 
 ## ✅ Cross-Version Compatibility
-- **Retail** (Dragonflight)
+- **Retail**
 - **Classic Era**
 - **Cata Classic**
 

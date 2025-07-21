@@ -1,4 +1,4 @@
-## Interface: 110107  // Atualizado para 11.1.7
+## Interface: 110107, 011507, 050500
 ## Title: GoldWatch
 ## Notes: Tracks gold earnings in real-time with advanced features
 ## Author: Levindo

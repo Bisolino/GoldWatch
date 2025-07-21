@@ -24,7 +24,7 @@ function GW.UI.Create()
     local frame = GW.UI.frame
     
     -- Tamanho do frame principal
-    frame:SetSize(380, 350)
+    frame:SetSize(380, 370)  -- Aumentado para acomodar o novo texto
     
     -- Fundo com textura de pergaminho
     local bg = frame:CreateTexture(nil, "BACKGROUND")
@@ -47,6 +47,11 @@ function GW.UI.Create()
     frame.title:SetShadowColor(0, 0, 0, 1)
     frame.title:SetShadowOffset(1, -1)
 
+    -- NOVO: Mensagem de compatibilidade multi-versão
+    frame.versionText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    frame.versionText:SetPoint("TOP", frame.title, "BOTTOM", 0, -5)
+    frame.versionText:SetText(GW.L.GetString("CROSS_VERSION"))
+    
     -- Botão de configurações
     GW.UI.gearBtn = CreateFrame("Button", nil, frame)
     GW.UI.gearBtn:SetSize(20, 20)
@@ -75,8 +80,8 @@ function GW.UI.Create()
     headerBg:SetTexture("Interface\\Tooltips\\UI-Tooltip-Background")
     headerBg:SetTexCoord(0, 0, 0, 0.0)
     headerBg:SetVertexColor(0, 0, 0, 0)
-    headerBg:SetPoint("TOPLEFT", 15, -45)
-    headerBg:SetPoint("TOPRIGHT", -15, -45)
+    headerBg:SetPoint("TOPLEFT", 15, -55)  -- Ajustado para baixo
+    headerBg:SetPoint("TOPRIGHT", -15, -55)  -- Ajustado para baixo
     headerBg:SetHeight(25)
     
     -- Armazenar labels na tabela GW.UI.labels
@@ -335,27 +340,37 @@ function GW.UI.CreateConfigWindow()
     
     -- Texto descritivo
     frame.intervalSlider.text = _G[frame.intervalSlider:GetName().."Text"]
-    frame.intervalSlider.text:SetText(format("%d segundos", GW.Settings.updateInterval or DEFAULT_UPDATE_INTERVAL))
-    
+    frame.intervalSlider.text:SetText(format(GW.L.GetString("UPDATE_INTERVAL_SECONDS"), GW.Settings.updateInterval or DEFAULT_UPDATE_INTERVAL))
+
     -- Configurar evento de mudança
     frame.intervalSlider:SetScript("OnValueChanged", function(self, value)
-        value = floor(value)
-        GW.Settings.updateInterval = value
-        self.text:SetText(format("%d segundos", value))
-        
-        -- Atualizar imediatamente para feedback visual
-        if GW.UI.frame then
-            GW.UI.frame.updateTimer = 0
-        end
-    end)
+    value = floor(value)
+    GW.Settings.updateInterval = value
+    self.text:SetText(format(GW.L.GetString("UPDATE_INTERVAL_SECONDS"), value))
     
-    -- Tooltip explicativa
+    -- Atualizar imediatamente para feedback visual
+    if GW.UI.frame then
+        GW.UI.frame.updateTimer = 0
+    end
+end)
+    
     frame.intervalSlider:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_TOP")
-        GameTooltip:SetText(GW.L.GetString("UPDATE_INTERVAL_TT"), 1, 1, 1)
+    GameTooltip:SetOwner(self, "ANCHOR_TOP")
+    GameTooltip:SetText(GW.L.GetString("UPDATE_INTERVAL_TT"), 1, 1, 1)
+    
+    -- Adicionar tooltip localizada
+    if GW.Settings.locale == "ptBR" then
         GameTooltip:AddLine("1s = Mais fluido (mais CPU)\n5s = Mais leve (menos atualizações)", 1, 1, 1, true)
-        GameTooltip:Show()
-    end)
+    elseif GW.Settings.locale == "esMX" then
+        GameTooltip:AddLine("1s = Más fluido (más CPU)\n5s = Más ligero (menos actualizaciones)", 1, 1, 1, true)
+    elseif GW.Settings.locale == "deDE" then
+        GameTooltip:AddLine("1s = Flüssiger (mehr CPU)\n5s = Leichter (weniger Updates)", 1, 1, 1, true)
+    else -- enUS
+        GameTooltip:AddLine("1s = Smoother (more CPU)\n5s = Lighter (fewer updates)", 1, 1, 1, true)
+    end
+    
+    GameTooltip:Show()
+end)
     frame.intervalSlider:SetScript("OnLeave", GameTooltip_Hide)
     
     -- Definir valor inicial
@@ -482,6 +497,17 @@ function GW.UI.UpdateConfigWindow()
             GW.UI.UpdateConfigWindow()
         end
         UIDropDownMenu_AddButton(info)
+	
+	info.text = GW.L.GetString("LANGUAGE_GERMAN")  -- Corrigido para usar a chave
+    	info.value = "deDE"
+    	info.func = function() 
+            GW.Settings.locale = "deDE"
+            GW.UI.UpdateAllTexts()
+            GW.History.UpdateHistoryTexts()
+            print(format(GW.L.GetString("LOCALE_CHANGED"), GW.L.GetString("LANGUAGE_GERMAN")))
+            GW.UI.UpdateConfigWindow()
+        end
+        UIDropDownMenu_AddButton(info)
     end)
     UIDropDownMenu_SetSelectedValue(GW.UI.configFrame.languageDropdown, GW.Settings.locale)
     
@@ -518,8 +544,8 @@ function GW.UI.UpdateConfigWindow()
     GW.UI.configFrame.minimapCheckbox:SetChecked(GW.Settings.showMinimap)
     
     -- Atualizar o slider de intervalo
-    GW.UI.configFrame.intervalSlider:SetValue(GW.Settings.updateInterval or DEFAULT_UPDATE_INTERVAL)
-    GW.UI.configFrame.intervalSlider.text:SetText(format("%d segundos", GW.Settings.updateInterval or DEFAULT_UPDATE_INTERVAL))
+GW.UI.configFrame.intervalSlider:SetValue(GW.Settings.updateInterval or DEFAULT_UPDATE_INTERVAL)
+GW.UI.configFrame.intervalSlider.text:SetText(format(GW.L.GetString("UPDATE_INTERVAL_SECONDS"), GW.Settings.updateInterval or DEFAULT_UPDATE_INTERVAL))
 end
 
 function GW.UI.ToggleConfigWindow()
@@ -602,6 +628,10 @@ function GW.UI.UpdateAllTexts()
     
     -- Atualizar janela principal
     GW.UI.frame.title:SetText(GW.L.GetString("UI_TITLE"))
+    -- Atualizar o texto de versão (nova adição)
+    if GW.UI.frame.versionText then
+        GW.UI.frame.versionText:SetText(GW.L.GetString("CROSS_VERSION"))
+    end
     
     -- Atualizar labels se existirem
     if GW.UI.labels then
